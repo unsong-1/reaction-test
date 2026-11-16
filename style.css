@@ -1,0 +1,222 @@
+/* 반응 테스트 전용 스타일 시트 (확장판) */
+
+@layer utilities {
+  .tap-highlight-transparent {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+html, body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 상태별 배경 및 테두리 스타일 */
+#testArea {
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+
+#testArea:active {
+  transform: scale(0.995);
+}
+
+/* 1. 대기/시작 전 상태 (IDLE) */
+#testArea.state-idle {
+  background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
+  border-color: #334155;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.7);
+}
+#testArea.state-idle:hover {
+  border-color: #475569;
+  box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.15);
+}
+
+/* 2. 대기 상태 (WAITING - RED) */
+#testArea.state-waiting {
+  background: radial-gradient(circle at 50% 30%, #dc2626 0%, #991b1b 100%);
+  border-color: #ef4444;
+  box-shadow: 0 0 50px -10px rgba(220, 38, 38, 0.6);
+  cursor: pointer;
+}
+
+/* 3. 초록색 전환 (READY_TO_CLICK - GREEN) */
+#testArea.state-ready {
+  background: radial-gradient(circle at 50% 30%, #10b981 0%, #047857 100%);
+  border-color: #34d399;
+  box-shadow: 0 0 60px 5px rgba(16, 185, 129, 0.75);
+  cursor: pointer;
+  animation: flashHighlight 0.15s ease-out;
+}
+
+/* 4. 조기 클릭 실패 (EARLY_CLICK - AMBER) */
+#testArea.state-early {
+  background: radial-gradient(circle at 50% 30%, #d97706 0%, #92400e 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 0 45px -10px rgba(217, 119, 6, 0.6);
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* 5. 회차 결과 상태 (ROUND_RESULT - BLUE) */
+#testArea.state-round-result {
+  background: radial-gradient(circle at 50% 30%, #2563eb 0%, #1e40af 100%);
+  border-color: #60a5fa;
+  box-shadow: 0 0 45px -10px rgba(37, 99, 235, 0.5);
+  cursor: default;
+}
+
+/* 6. 일시정지 상태 (PAUSED - INDIGO) */
+#testArea.state-paused {
+  background: radial-gradient(circle at 50% 30%, #4338ca 0%, #1e1b4b 100%);
+  border-color: #818cf8;
+  box-shadow: 0 0 45px -10px rgba(67, 56, 202, 0.5);
+}
+
+/* 7. 가짜 착시 플래시 (DECOY - ORANGE FLASH) */
+#testArea.state-decoy {
+  background: radial-gradient(circle at 50% 30%, #f59e0b 0%, #b45309 100%);
+  border-color: #fbbf24;
+  box-shadow: 0 0 50px 0 rgba(245, 158, 11, 0.7);
+  animation: decoyPulse 0.15s ease-in-out;
+}
+
+/* 8. 시간 초과 실패 (MISSED - CRIMSON) */
+#testArea.state-missed {
+  background: radial-gradient(circle at 50% 30%, #be123c 0%, #881337 100%);
+  border-color: #fb7185;
+  box-shadow: 0 0 45px -10px rgba(190, 18, 60, 0.6);
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* 9. 완전 검은색 대기/소리 화면 (BLACKOUT - NO VISUAL CUES) */
+#testArea.state-blackout {
+  background: #030712 !important;
+  border-color: #111827 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+/* 흔들림 애니메이션 (조기 클릭 시) */
+@keyframes shake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+/* 초록 전환 시 순간 섬광 효과 */
+@keyframes flashHighlight {
+  0% { filter: brightness(1.6); transform: scale(1.01); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+
+/* 가짜 착시 번쩍임 애니메이션 */
+@keyframes decoyPulse {
+  0% { filter: brightness(1.4); }
+  100% { filter: brightness(1); }
+}
+
+/* 모달 애니메이션 */
+.modal-active {
+  display: flex !important;
+}
+
+/* 설정 횟수 옵션 버튼 액티브 스타일 */
+.round-option-btn.active {
+  border-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+.round-option-btn.active span:first-child {
+  color: #34d399;
+}
+
+/* 난이도 카드 라디오 액티브 스타일 */
+.difficulty-card:has(input:checked) {
+  border-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+/* 키보드 포커스 가시성 */
+#testArea:focus-visible {
+  outline: 3px solid #10b981;
+  outline-offset: 4px;
+}
+
+/* 슬라이더 스타일 */
+input[type=range] {
+  height: 6px;
+  border-radius: 9999px;
+  background: #1e293b;
+}
+
+/* 스크롤바 숨김 유틸리티 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 위치 반응 테스트: 조준 타겟 스타일 */
+.position-target {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f59e0b 0%, #d97706 70%, #b45309 100%);
+  border: 3px solid #fef3c7;
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.9), 0 0 45px rgba(245, 158, 11, 0.4);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  animation: targetPulse 0.8s ease-in-out infinite alternate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+.position-target::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 8px #ffffff;
+}
+
+@keyframes targetPulse {
+  0% { transform: translate(-50%, -50%) scale(0.92); }
+  100% { transform: translate(-50%, -50%) scale(1.08); filter: brightness(1.2); }
+}
+
+/* 소리 반응: 오디오 웨이브 펄스 */
+.audio-wave {
+  animation: audioPulse 1.2s ease-in-out infinite;
+}
+@keyframes audioPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* 방향 테스트 키보드 하이라이트 */
+.dir-btn:active, .dir-btn.pressed {
+  transform: scale(0.92);
+  filter: brightness(1.3);
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

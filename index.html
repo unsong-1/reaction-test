@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>반응 테스트 (Reaction Test) | Green Reflex</title>
+  
+  <!-- Pretendard Font & Inter -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              idle: '#1e293b',
+              waiting: '#dc2626',
+              ready: '#10b981',
+              early: '#d97706',
+              result: '#2563eb',
+              paused: '#4338ca',
+              decoy: '#f59e0b',
+              missed: '#be123c'
+            }
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'bounce-short': 'bounce 0.6s ease infinite',
+            'scale-up': 'scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          },
+          keyframes: {
+            scaleUp: {
+              '0%': { transform: 'scale(0.96)', opacity: '0' },
+              '100%': { transform: 'scale(1)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Chart.js CDN for Analytics & Line Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white antialiased font-sans select-none">
+
+  <!-- 상단 네비게이션 헤더 -->
+  <header class="w-full max-w-4xl mx-auto px-4 py-3 sm:py-5 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black flex-shrink-0">
+        <i data-lucide="zap" class="w-6 h-6 stroke-[2.5]"></i>
+      </div>
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          반응 테스트
+          <span id="headerRoundBadge" class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20 cursor-pointer hover:bg-emerald-500/20 transition-colors" title="반복 횟수 설정 변경 (클릭)">5회</span>
+                  </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">초록색으로 바뀌는 순간, 최대한 빠르게 클릭하세요!</p>
+      </div>
+    </div>
+
+    <!-- 우측 유틸리티 버튼들 (최고기록, 통계, 설정, 사운드, 가이드) -->
+    <div class="flex items-center space-x-1.5 sm:space-x-2">
+      <!-- 개인 최고 세션 평균 배지 -->
+      <div id="pbBadge" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-amber-400 shadow-sm" title="내 역대 최고 세션 평균 반응속도">
+        <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
+        <span>최고 평균:</span>
+        <span id="pbValue" class="font-bold tracking-wider">-- ms</span>
+      </div>
+
+      <!-- 기록 및 통계 버튼 -->
+      <button id="analyticsBtn" class="p-2 sm:p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500" title="기록 및 통계 분석" aria-label="기록 및 통계">
+        <i data-lucide="bar-chart-2" class="w-5 h-5 text-teal-400"></i>
+      </button>
+
+      <!-- 테스트 설정 버튼 -->
+      <button id="settingsBtn" class="p-2 sm:p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500" title="테스트 설정 (횟수/대기시간)" aria-label="테스트 설정">
+        <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+      </button>
+
+      <!-- 사운드 토글 버튼 -->
+      <button id="soundToggleBtn" class="p-2 sm:p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500" title="효과음 켜기/끄기" aria-label="효과음 토글">
+        <i id="soundIcon" data-lucide="volume-2" class="w-5 h-5"></i>
+      </button>
+
+      <!-- 도움말 모달 열기 버튼 -->
+      <button id="helpBtn" class="p-2 sm:p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500" title="테스트 가이드" aria-label="테스트 가이드">
+        <i data-lucide="help-circle" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- 메인 반응 테스트 인터랙션 영역 -->
+  <main class="w-full max-w-4xl mx-auto px-4 flex-1 flex flex-col justify-center items-center py-2 sm:py-4">
+    
+    <!-- 모바일용 최고기록 표시 (상단바) -->
+    <div id="pbBadgeMobile" class="md:hidden flex items-center space-x-1.5 px-3 py-1 mb-2.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-medium text-amber-400">
+      <i data-lucide="trophy" class="w-3.5 h-3.5 text-amber-400"></i>
+      <span>최고 평균:</span>
+      <span id="pbValueMobile" class="font-bold">-- ms</span>
+    </div>
+
+    <!-- 상위 플레이 모드 카테고리 탭 (개별 테스트 / 랜덤 모드 / 지정 모드) -->
+    <div id="playCategoryTabs" class="w-full max-w-2xl mb-2 flex items-center justify-center p-1 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs font-semibold shadow-sm relative z-20 pointer-events-auto">
+      <button type="button" class="category-tab-btn active flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all text-emerald-400 bg-emerald-500/10 font-bold border border-emerald-500/30 shadow-sm cursor-pointer" data-category="single">
+        <i data-lucide="target" class="w-3.5 h-3.5"></i>
+        <span>개별 테스트</span>
+      </button>
+      <button type="button" class="category-tab-btn flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer" data-category="random">
+        <i data-lucide="shuffle" class="w-3.5 h-3.5 text-rose-400"></i>
+        <span>랜덤 모드 🎲</span>
+      </button>
+      <button type="button" class="category-tab-btn flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer" data-category="custom-sequence">
+        <i data-lucide="list-ordered" class="w-3.5 h-3.5 text-violet-400"></i>
+        <span>지정 모드 📋</span>
+      </button>
+    </div>
+
+    <!-- 테스트 모드 선택 탭 바 (12종 개별 모드) -->
+    <div id="modeSelector" class="w-full max-w-2xl mb-3 flex flex-nowrap items-center gap-1.5 p-1 pb-2 rounded-2xl bg-slate-900/90 border border-slate-800 overflow-x-auto scroll-smooth">
+      <button type="button" class="mode-tab-btn active shrink-0 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all text-emerald-400 bg-emerald-500/10 border border-emerald-500/30" data-mode="green-light">
+        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+        <span>초록불 반응</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="color-match">
+        <i data-lucide="palette" class="w-3.5 h-3.5"></i>
+        <span>색상 구분</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="direction">
+        <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+        <span>방향 반응</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="position">
+        <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+        <span>위치 조준</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="shape">
+        <i data-lucide="shapes" class="w-3.5 h-3.5"></i>
+        <span>도형 반응</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="audio">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+        <span>소리 반응</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="hold-release">
+        <i data-lucide="hand" class="w-3.5 h-3.5"></i>
+        <span>홀드 반응</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="dual-stimuli">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+        <span>동시 자극</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="inverted-direction">
+        <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+        <span>순서 반전</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="signal-offset">
+        <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+        <span>신호 종료</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="expansion-timing">
+        <i data-lucide="disc" class="w-3.5 h-3.5"></i>
+        <span>압력 타이밍</span>
+      </button>
+      <button type="button" class="mode-tab-btn shrink-0 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all text-slate-400 hover:text-slate-200 border border-transparent" data-mode="rapid-number">
+        <i data-lucide="hash" class="w-3.5 h-3.5"></i>
+        <span>숫자 출현</span>
+      </button>
+    </div>
+
+    <!-- 모드별 미니 가이드 배너 -->
+    <div id="modeGuideBanner" class="w-full max-w-2xl mb-2.5 flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs text-slate-300">
+      <div class="flex items-center gap-2 truncate">
+        <span id="guideModeBadge" class="px-2 py-0.5 rounded-md font-bold text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">초록불 반응</span>
+        <span id="guideModeDesc" class="text-slate-400 truncate">초록색으로 바뀌는 순간, 최대한 빠르게 클릭하세요.</span>
+      </div>
+      <span id="guideModeControls" class="text-[11px] text-slate-400 font-medium whitespace-nowrap flex items-center gap-1">
+        <kbd class="px-1 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px]">Space</kbd> / 클릭
+      </span>
+    </div>
+
+    <!-- 진행 상황 표시줄 (라운드 게이지 및 일시정지 버튼) -->
+    <div id="roundProgressWrapper" class="w-full max-w-2xl mb-3 hidden animate-scale-up">
+      <div class="flex justify-between items-center text-xs font-semibold text-slate-400 mb-2 px-1">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span id="statusText">테스트 진행 중</span>
+                  </div>
+        <div class="flex items-center gap-3">
+          <span id="roundIndicator" class="text-emerald-400 font-bold tracking-wide">라운드 1 / 5</span>
+          <!-- 진행 중 일시정지 버튼 -->
+          <button id="pauseBtn" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-amber-400 text-xs flex items-center gap-1 transition-all active:scale-95 shadow-sm" title="일시정지 (P 또는 Esc)">
+            <i data-lucide="pause" class="w-3.5 h-3.5"></i>
+            <span>일시정지</span>
+          </button>
+        </div>
+      </div>
+      <div class="h-2 w-full bg-slate-900/90 rounded-full overflow-hidden p-0.5 border border-slate-800/80">
+        <div id="progressBar" class="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-300 w-[0%]"></div>
+      </div>
+    </div>
+
+    <!-- 반응 메인 인터랙션 박스 (Click Area) -->
+    <div id="testArea" class="w-full max-w-2xl min-h-[400px] sm:min-h-[460px] rounded-3xl cursor-pointer select-none transition-colors duration-200 shadow-2xl relative overflow-hidden flex flex-col items-center justify-center p-5 sm:p-8 pb-12 sm:pb-14 text-center border state-idle" tabindex="0" role="button" aria-label="반응 테스트 영역">
+      
+      <!-- 백그라운드 애니메이션 오버레이 -->
+      <div id="pulseEffect" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300"></div>
+
+      <!-- 콘텐츠 슬롯 (상태에 따라 동적 변경) -->
+      <div id="testContent" class="relative z-10 flex flex-col items-center justify-center max-w-xl w-full transition-all">
+        <!-- JS에서 동적으로 렌더링 됩니다 -->
+      </div>
+
+      <!-- 하단 키보드 단축키 힌트 -->
+      <div class="absolute bottom-3 left-0 right-0 flex items-center justify-center pointer-events-none opacity-70 z-10">
+        <span class="text-[10px] sm:text-[11px] text-slate-400/90 bg-slate-950/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-sm">
+          <kbd class="px-1.5 py-0.5 text-[9px] sm:text-[10px] bg-slate-800 text-slate-200 rounded border border-slate-700 font-mono shadow-sm">Spacebar</kbd>
+          또는 화면 클릭으로 진행
+        </span>
+      </div>
+    </div>
+
+    <!-- 결과 통계 화면 (완료 후 노출) -->
+    <div id="resultDashboard" class="w-full max-w-2xl hidden flex-col gap-6 animate-scale-up">
+      <!-- JS에서 상세 통계 카드 및 Chart.js 그래프로 동적 렌더링 -->
+    </div>
+
+  </main>
+
+  <!-- 하단 푸터 -->
+  <footer class="w-full max-w-4xl mx-auto px-4 py-3 text-center text-xs text-slate-500">
+    <div class="flex flex-wrap items-center justify-center gap-3">
+      <span>정밀 타이머: <span class="text-slate-400 font-mono font-semibold">performance.now()</span></span>
+      <span>•</span>
+      <span>단축키: <kbd class="px-1 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">Space</kbd> 클릭 / <kbd class="px-1 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">P</kbd> 일시정지</span>
+      <span>•</span>
+      <button id="openResetFromFooterBtn" class="hover:text-rose-400 underline transition-colors">기록 초기화</button>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- 1. 테스트 설정 모달 (Settings Modal)                     -->
+  <!-- ======================================================== -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-left animate-scale-up max-h-[90vh] overflow-y-auto">
+      <button id="closeSettingsBtn" class="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" aria-label="닫기">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+          <i data-lucide="sliders" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-white">테스트 환경 설정</h2>
+          <p class="text-xs text-slate-400">원하는 조건에 맞춰 테스트를 커스터마이징하세요</p>
+        </div>
+      </div>
+
+      <div class="space-y-6 text-sm">
+        
+        <!-- (1) 테스트 횟수 선택 -->
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">테스트 반복 횟수</label>
+          <div class="grid grid-cols-3 gap-2.5">
+            <button type="button" class="round-option-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-center hover:border-emerald-500 transition-all flex flex-col items-center gap-0.5 active:scale-95" data-rounds="5">
+              <span class="text-base text-white">5 회</span>
+              <span class="text-[11px] text-slate-400 font-normal">빠른 기본 측정</span>
+            </button>
+            <button type="button" class="round-option-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-center hover:border-emerald-500 transition-all flex flex-col items-center gap-0.5 active:scale-95" data-rounds="10">
+              <span class="text-base text-white">10 회</span>
+              <span class="text-[11px] text-slate-400 font-normal">표준 정밀 측정</span>
+            </button>
+            <button type="button" class="round-option-btn py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 font-bold text-center hover:border-emerald-500 transition-all flex flex-col items-center gap-0.5 active:scale-95" data-rounds="20">
+              <span class="text-base text-white">20 회</span>
+              <span class="text-[11px] text-slate-400 font-normal">집중 지구력 테스트</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- (2) 대기 시간 범위 설정 (Min/Max 슬라이더) -->
+        <div class="p-4 rounded-2xl bg-slate-950/60 border border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">대기시간 무작위 범위</label>
+            <span id="waitRangeLabel" class="text-xs font-mono font-bold text-emerald-400">1.0초 ~ 5.0초</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mb-3">빨간 화면에서 초록색으로 전환될 때까지의 대기 시간 범위를 지정합니다.</p>
+          
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs text-slate-400 mb-1">
+                <span>최소 대기시간 (Min): <span id="minWaitVal" class="text-white font-mono">1.0</span>초</span>
+                <span class="text-[10px] text-slate-500">0.5초 ~ 4.0초</span>
+              </div>
+              <input type="range" id="minWaitInput" min="0.5" max="4.0" step="0.5" value="1.0" class="w-full accent-emerald-500 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs text-slate-400 mb-1">
+                <span>최대 대기시간 (Max): <span id="maxWaitVal" class="text-white font-mono">5.0</span>초</span>
+                <span class="text-[10px] text-slate-500">1.5초 ~ 8.0초</span>
+              </div>
+              <input type="range" id="maxWaitInput" min="1.5" max="8.0" step="0.5" value="5.0" class="w-full accent-emerald-500 cursor-pointer">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end gap-2.5">
+        <button id="saveSettingsBtn" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
+          설정 저장 및 적용
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 2. 기록 & 통계 분석 모달 (Analytics Modal)                -->
+  <!-- ======================================================== -->
+  <div id="analyticsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative text-left animate-scale-up max-h-[92vh] flex flex-col">
+      <button id="closeAnalyticsBtn" class="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" aria-label="닫기">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- 모달 헤더 -->
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center">
+          <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-white">기록 및 통계 분석</h2>
+          <p class="text-xs text-slate-400">누적된 테스트 결과와 추이를 확인하세요</p>
+        </div>
+      </div>
+
+      <!-- 탭 내비게이션 -->
+      <div class="flex border-b border-slate-800 mb-4 gap-2">
+        <button id="tabHistoryBtn" class="analytics-tab-btn px-4 py-2 text-xs sm:text-sm font-bold border-b-2 border-emerald-400 text-emerald-400 flex items-center gap-1.5 transition-colors">
+          <i data-lucide="list" class="w-4 h-4"></i>
+          <span>최근 기록 목록</span>
+        </button>
+        <button id="tabChartsBtn" class="analytics-tab-btn px-4 py-2 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-colors">
+          <i data-lucide="trending-up" class="w-4 h-4"></i>
+          <span>누적 통계 차트</span>
+        </button>
+      </div>
+
+      <!-- 탭 컨텐츠 영역 -->
+      <div class="flex-1 overflow-y-auto pr-1 space-y-4">
+        
+        <!-- 탭 1: 최근 테스트 히스토리 목록 -->
+        <div id="tabContentHistory" class="space-y-3">
+          <!-- 모드 필터 칩 바 -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+            <button type="button" class="history-filter-btn active px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap font-medium transition-all" data-filter="all">전체 모드</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="green-light">초록불</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="color-match">색상</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="direction">방향</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="position">위치</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="shape">도형</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="audio">소리</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="hold-release">홀드</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="dual-stimuli">동시자극</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="inverted-direction">순서반전</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="signal-offset">신호종료</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="expansion-timing">압력타이밍</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="rapid-number">숫자출현</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="random">🎲 랜덤</button>
+            <button type="button" class="history-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:text-white whitespace-nowrap transition-all" data-filter="custom-sequence">📋 지정</button>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+            <span id="historyCountText">총 0개의 테스트 세션 기록</span>
+            <button id="clearAllHistoryBtn" class="text-rose-400 hover:underline flex items-center gap-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              기록 전체 삭제
+            </button>
+          </div>
+
+          <!-- 히스토리 카드 목록 슬롯 -->
+          <div id="historyListContainer" class="space-y-2.5">
+            <!-- JS로 동적 렌더링 -->
+          </div>
+        </div>
+
+        <!-- 탭 2: 누적 통계 및 차트 -->
+        <div id="tabContentCharts" class="hidden space-y-5">
+          <!-- 세션별 평균 반응속도 변화 꺾은선 차트 -->
+          <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800">
+            <h4 class="text-xs font-bold text-slate-300 mb-3 flex items-center justify-between">
+              <span>최근 세션별 평균 반응속도 추이</span>
+              <span class="text-[10px] text-slate-500 font-normal">낮을수록 빠름</span>
+            </h4>
+            <div class="w-full h-52 relative">
+              <canvas id="historyTrendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 모드별 평균 반응속도 비교 막대 차트 -->
+          <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800">
+            <h4 class="text-xs font-bold text-slate-300 mb-3">테스트 모드별 평균 속도 비교 (Chart)</h4>
+            <div class="w-full h-48 relative">
+              <canvas id="modeCompareChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end">
+        <button id="closeAnalyticsBottomBtn" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl transition-all">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 3. 기록 초기화 확인 모달 (Reset Confirm Modal)           -->
+  <!-- ======================================================== -->
+  <div id="resetConfirmModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-rose-500/30 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl relative text-left animate-scale-up">
+      <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mb-4">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white mb-1.5">모든 기록을 초기화하시겠습니까?</h3>
+      <p class="text-xs text-slate-400 leading-relaxed mb-6">
+        저장된 **역대 최고 세션 기록(Personal Best)**과 **누적된 모든 테스트 히스토리 데이터**가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+      </p>
+
+      <div class="flex items-center justify-end gap-2.5">
+        <button id="cancelResetBtn" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-all">
+          취소
+        </button>
+        <button id="confirmResetBtn" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-rose-600/30">
+          초기화 실행
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 3-1. 테스트 중단 및 홈으로 이동 확인 모달 (Quit Confirm) -->
+  <!-- ======================================================== -->
+  <div id="quitConfirmModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl relative text-left animate-scale-up">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mb-4">
+        <i data-lucide="help-circle" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white mb-1.5">테스트를 중단하고 처음으로 돌아갈까요?</h3>
+      <p id="quitModalDesc" class="text-xs text-slate-400 leading-relaxed mb-6">
+        현재 진행 중인 라운드 측정 데이터가 취소되고 기본 홈 화면으로 초기화됩니다. (환경 설정은 유지됩니다)
+      </p>
+
+      <div class="flex items-center justify-end gap-2.5">
+        <button id="cancelQuitBtn" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-all">
+          계속 진행하기
+        </button>
+        <button id="confirmQuitBtn" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-rose-600/30 flex items-center gap-1.5">
+          <i data-lucide="home" class="w-3.5 h-3.5"></i>
+          <span>처음으로 이동</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 4. 가이드 & 안내 모달 (Help Modal)                       -->
+  <!-- ======================================================== -->
+  <div id="helpModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-left animate-scale-up max-h-[90vh] overflow-y-auto">
+      <button id="closeHelpBtn" class="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" aria-label="닫기">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+          <i data-lucide="info" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-white">반응 테스트 가이드</h2>
+          <p class="text-xs text-slate-400">정확한 측정을 위한 규칙과 새로운 기능들</p>
+        </div>
+      </div>
+
+      <div class="space-y-3.5 text-sm text-slate-300">
+        <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+          <span class="flex-shrink-0 w-6 h-6 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 flex items-center justify-center font-bold text-xs mt-0.5">1</span>
+          <div>
+            <h3 class="font-semibold text-white">빨간색 대기 화면</h3>
+            <p class="text-xs text-slate-400 mt-0.5">설정된 범위(예: 1~5초) 동안 무작위로 대기합니다. 미리 클릭하면 조기 클릭(False Start) 실패입니다.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+          <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs mt-0.5">2</span>
+          <div>
+            <h3 class="font-semibold text-white">초록색 즉시 클릭!</h3>
+            <p class="text-xs text-slate-400 mt-0.5">화면이 <strong class="text-emerald-400">초록색</strong>이 되는 즉시 화면을 탭하거나 <kbd class="px-1 py-0.5 bg-slate-800 rounded text-[11px]">Spacebar</kbd>를 누르세요.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+          <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs mt-0.5">3</span>
+          <div>
+            <h3 class="font-semibold text-white">일시정지(Pause) 기능</h3>
+            <p class="text-xs text-slate-400 mt-0.5">테스트 도중 언제든지 <kbd class="px-1 py-0.5 bg-slate-800 rounded text-[11px]">P</kbd> 키나 우측 상단 일시정지 버튼을 눌러 측정을 멈추고 안전하게 재개할 수 있습니다.</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+          <span class="flex-shrink-0 w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 border border-teal-500/30 flex items-center justify-center font-bold text-xs mt-0.5">4</span>
+          <div>
+            <h3 class="font-semibold text-white">12가지 풍부한 반응 테스트 & 멀티 모드</h3>
+            <p class="text-xs text-slate-400 mt-0.5">초록불, 색상, 방향, 위치, 도형, 소리, 홀드, 동시 자극, 순서 반전, 신호 종료, 압력 타이밍, 숫자 출현 등 12종의 테스트를 개별/랜덤/지정 순서 모드로 즐겨보세요.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+        <button id="confirmHelpBtn" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
+          확인했습니다
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 알림 -->
+  <div id="toastNotification" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none translate-y-4 bg-emerald-500 text-slate-950" style="min-width:220px;max-width:90vw;">
+    <i id="toastIcon" data-lucide="check-circle" class="w-4 h-4 flex-shrink-0"></i>
+    <span id="toastMessage">설정이 성공적으로 적용되었습니다.</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
